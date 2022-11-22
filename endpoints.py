@@ -97,4 +97,81 @@ def triple(asset_list, bank_list, amount, fiat):
     return orders
 
 
-pprint(triple(['USDT', "ETH", "BTC", "BUSD", "BNB"], ["TinkoffNew", "RosBankNew", "RaiffeisenBank", "QIWI", "MTSBank", "Payeer", "Advcash"], 10000, "RUB"))
+def double(asset_list, bank_list, amount, fiat):
+    """
+    Returns all profit orders
+
+        Params:
+            asset_list (list): possible assets
+            bank_list (list): possible banks
+            amount (int): user amount in deal
+            fiat (str):
+
+        Returns:
+            orders (list): list of orders with take > 10
+    """
+
+    # Getting orders from JSON files
+    with \
+            open('binance_orders.json') as fp1, \
+            open('huobi_orders.json') as fp2, \
+            open('bybit_orders.json') as fp3:
+
+        binance_orders = json.load(fp1)
+        huobi_orders = json.load(fp2)
+        bybit_orders = json.load(fp3)
+
+    # Getting 'buy' and 'sell' orders from
+    # dicts with bank and asset checking
+    buy_orders = []
+    sell_orders = []
+
+    for exchange in binance_orders, huobi_orders, bybit_orders:
+        for order in exchange['buy_orders']:
+            if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
+                buy_orders.append(order)
+
+        for order in exchange['sell_orders']:
+            if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
+                sell_orders.append(order)
+
+    # Find deals with take > 10
+    orders = []
+
+    for buy_order in buy_orders:
+        for sell_order in sell_orders:
+            try:
+                take_money = amount / buy_order['price'] * sell_order['price'] - amount
+            except ZeroDivisionError:
+                continue
+
+            if take_money > 10:
+                orders.append(
+                    {
+                        "buy_order": buy_order,
+                        "sell_order": sell_order,
+                        "other_info": {
+                            "take_money": round(take_money, 2),
+                            "take_money_proc": round((take_money / amount) * 100, 2)
+                        }
+                    }
+                )
+
+    return orders
+
+
+if __name__ == '__main__':
+
+    pprint(triple(
+        asset_list=['USDT', 'ETH', 'BTC', 'BUSD', 'BNB'],
+        bank_list=['TinkoffNew', 'RosBankNew', 'RaiffeisenBank', 'QIWI', 'MTSBank', 'Payeer', 'Advcash'],
+        amount=10000,
+        fiat='RUB'
+    ))
+
+    pprint(double(
+        asset_list=['USDT', 'ETH', 'BTC', 'BUSD', 'BNB'],
+        bank_list=['TinkoffNew', 'RosBankNew', 'RaiffeisenBank', 'QIWI', 'MTSBank', 'Payeer', 'Advcash'],
+        amount=10000,
+        fiat='RUB'
+    ))
