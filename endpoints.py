@@ -140,38 +140,22 @@ def double(asset_list, bank_list, amount, fiat):
 
     for buy_order in buy_orders:
         for sell_order in sell_orders:
-            try:
-                take_money = amount / buy_order['price'] * sell_order['price'] - amount
-            except ZeroDivisionError:
-                continue
+            if buy_order['asset'] == sell_order['asset']:
+                try:
+                    take_money = amount / buy_order['price'] * sell_order['price'] - amount
+                except ZeroDivisionError:
+                    continue
 
-            if take_money > 10:
-                orders.append(
-                    {
-                        "buy_order": buy_order,
-                        "sell_order": sell_order,
-                        "other_info": {
-                            "take_money": round(take_money, 2),
-                            "take_money_proc": round((take_money / amount) * 100, 2)
+                if take_money > 10:
+                    orders.append(
+                        {
+                            "buy_order": buy_order,
+                            "sell_order": sell_order,
+                            "other_info": {
+                                "take_money": round(take_money, 2),
+                                "take_money_proc": round((take_money / amount) * 100, 2)
+                            }
                         }
-                    }
-                )
+                    )
 
     return orders
-
-
-if __name__ == '__main__':
-
-    pprint(triple(
-        asset_list=['USDT', 'ETH', 'BTC', 'BUSD', 'BNB'],
-        bank_list=['TinkoffNew', 'RosBankNew', 'RaiffeisenBank', 'QIWI', 'MTSBank', 'Payeer', 'Advcash'],
-        amount=10000,
-        fiat='RUB'
-    ))
-
-    pprint(double(
-        asset_list=['USDT', 'ETH', 'BTC', 'BUSD', 'BNB'],
-        bank_list=['TinkoffNew', 'RosBankNew', 'RaiffeisenBank', 'QIWI', 'MTSBank', 'Payeer', 'Advcash'],
-        amount=10000,
-        fiat='RUB'
-    ))
