@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from endpoints import check_token, triple
+from endpoints import check_token, triple, double
 import uvicorn
 
 processes = []
@@ -39,6 +39,11 @@ async def request_bundle(model: TokenModel):
 @app.post("/api/get_triple/")
 async def request_bundle(model: TripleModel):
     return triple(model.assetList, model.bankList, model.amount, model.fiat)
+
+
+@app.post("/api/get_double/")
+async def request_bundle(model: TripleModel):
+    return double(model.assetList, model.bankList, model.amount, model.fiat)
 
 
 @app.get("/api/get_news/")
