@@ -97,7 +97,7 @@ def triple(asset_list, bank_list, amount, fiat):
     return orders
 
 
-def double(asset_list, bank_list, amount, fiat):
+def double(asset_list, bank_list, amount, fiat, change_type='bs'):
     """
     Returns all profit orders
 
@@ -106,56 +106,98 @@ def double(asset_list, bank_list, amount, fiat):
             bank_list (list): possible banks
             amount (int): user amount in deal
             fiat (str):
+            change_type:
+                'bs' = buy-sell
+                'sb' = sell-buy
+                'bb' = buy-buy
+                'ss' = sell-sell
 
         Returns:
             orders (list): list of orders with take > 10
     """
 
-    # Getting orders from JSON files
-    with \
-            open('binance_orders.json') as fp1, \
-            open('huobi_orders.json') as fp2, \
-            open('bybit_orders.json') as fp3:
+    def get_orders():
+        """
+        Getting orders from JSON files
 
-        binance_orders = json.load(fp1)
-        huobi_orders = json.load(fp2)
-        bybit_orders = json.load(fp3)
+            Returns:
+                buy_orders (list): list of buy orders
+                sell_orders (list): list of sell orders
+        """
 
-    # Getting 'buy' and 'sell' orders from
-    # dicts with bank and asset checking
-    buy_orders = []
-    sell_orders = []
+        with \
+                open('binance_orders.json') as fp1, \
+                open('huobi_orders.json') as fp2, \
+                open('bybit_orders.json') as fp3:
 
-    for exchange in binance_orders, huobi_orders, bybit_orders:
-        for order in exchange['buy_orders']:
-            if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
-                buy_orders.append(order)
+            binance_orders = json.load(fp1)
+            huobi_orders = json.load(fp2)
+            bybit_orders = json.load(fp3)
 
-        for order in exchange['sell_orders']:
-            if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
-                sell_orders.append(order)
+        # Getting 'buy' and 'sell' orders from
+        # dicts with bank and asset checking
+        buy_orders = []
+        sell_orders = []
 
-    # Find deals with take > 10
-    orders = []
+        for exchange in binance_orders, huobi_orders, bybit_orders:
+            for order in exchange['buy_orders']:
+                if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
+                    buy_orders.append(order)
 
-    for buy_order in buy_orders:
-        for sell_order in sell_orders:
-            if buy_order['asset'] == sell_order['asset']:
-                try:
-                    take_money = amount / buy_order['price'] * sell_order['price'] - amount
-                except ZeroDivisionError:
-                    continue
+            for order in exchange['sell_orders']:
+                if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
+                    sell_orders.append(order)
 
-                if take_money > 10:
-                    orders.append(
-                        {
-                            "buy_order": buy_order,
-                            "sell_order": sell_order,
-                            "other_info": {
-                                "take_money": round(take_money, 2),
-                                "take_money_proc": round((take_money / amount) * 100, 2)
+        return buy_orders, sell_orders
+
+    def get_profit_orders(buy_orders, sell_orders):
+        """
+        Find profit deals with take > 10
+
+            Params:
+                buy_orders (list): list of buy orders
+                sell_orders (list): list of sell orders
+
+            Returns:
+                profit_orders (list): list of orders with take > 10
+        """
+
+        def use_change_type(b, s):
+            match change_type:
+                case 'bs':
+                    return b, s
+                case 'sb':
+                    return s, b
+                case 'bb':
+                    return b, b
+                case 'ss':
+                    return s, s
+
+        profit_orders = []
+
+        for buy_order in buy_orders:
+            for sell_order in sell_orders:
+                if buy_order['asset'] == sell_order['asset']:
+                    try:
+                        take_money = amount / buy_order['price'] * sell_order['price'] - amount
+                    except ZeroDivisionError:
+                        continue
+
+                    if take_money > 10:
+                        buy_order, sell_order = use_change_type(buy_order, sell_order)
+                        profit_orders.append(
+                            {
+                                "buy_order": buy_order,
+                                "sell_order": sell_order,
+                                "other_info": {
+                                    "take_money": round(take_money, 2),
+                                    "take_money_proc": round((take_money / amount) * 100, 2)
+                                }
                             }
-                        }
-                    )
+                        )
 
-    return orders
+        return profit_orders
+
+    result = get_profit_orders(*get_orders())
+
+    return result
