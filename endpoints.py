@@ -124,6 +124,19 @@ def double(asset_list, bank_list, amount, fiat, change_type='bs'):
                 buy_orders (list): list of buy orders
                 sell_orders (list): list of sell orders
         """
+        
+        def use_change_type(b, s):
+            match change_type:
+                case 'bs':
+                    return b, s
+                case 'sb':
+                    return s, b
+                case 'bb':
+                    return b, b
+                case 'ss':
+                    return s, s
+                case _:
+                    return None
 
         with \
                 open('binance_orders.json') as fp1, \
@@ -147,6 +160,8 @@ def double(asset_list, bank_list, amount, fiat, change_type='bs'):
             for order in exchange['sell_orders']:
                 if order['asset'] in asset_list and bank_checker(order['bank'], bank_list):
                     sell_orders.append(order)
+        
+        buy_orders, sell_orders = use_change_type(buy_orders, sell_orders)
 
         return buy_orders, sell_orders
 
@@ -162,19 +177,6 @@ def double(asset_list, bank_list, amount, fiat, change_type='bs'):
                 profit_orders (list): list of orders with take > 10
         """
 
-        def use_change_type(b, s):
-            match change_type:
-                case 'bs':
-                    return b, s
-                case 'sb':
-                    return s, b
-                case 'bb':
-                    return b, b
-                case 'ss':
-                    return s, s
-
-        profit_orders = []
-
         for buy_order in buy_orders:
             for sell_order in sell_orders:
                 if buy_order['asset'] == sell_order['asset']:
@@ -184,7 +186,6 @@ def double(asset_list, bank_list, amount, fiat, change_type='bs'):
                         continue
 
                     if take_money > 10:
-                        buy_order, sell_order = use_change_type(buy_order, sell_order)
                         profit_orders.append(
                             {
                                 "buy_order": buy_order,
